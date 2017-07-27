@@ -19,6 +19,7 @@ var server = app.listen(8081, function() {
 })
 
 io.on('connection', function(socket) {
+
   socket.on('askWeather', function(data) {
     getJSON("http://api.openweathermap.org/data/2.5/weather?lat=" + data.lat + "&lon=" + data.lon + "&APPID=740d258738b933a9bc226c2106809d6c", function(error, jsonWeather) {
       getJSON("http://api.openweathermap.org/data/2.5/forecast?lat=" + data.lat + "&lon=" + data.lon + "&APPID=740d258738b933a9bc226c2106809d6c", function(error, jsonForecast) {
@@ -29,6 +30,7 @@ io.on('connection', function(socket) {
       });
     });
   });
+
   socket.on('askJSON', function(data) {
     var name = data.name;
     var commune;

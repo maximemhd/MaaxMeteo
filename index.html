@@ -57,8 +57,11 @@
         click: whenClickedCommunes
       });
     }
+    var init = false;
 
     function whenClickedDepartements(e) {
+      var communeLayer;
+
       console.log(e.target.feature.properties.nom); // nom du département
       map.fitBounds(e.target._bounds);
       var newName = e.target.feature.properties.nom.replace(/-/g, '');
@@ -73,29 +76,19 @@
       socket.on('repJSON', function(data) {
         //socket receive
         console.log(data);
-        L.geoJson(data.geojson, {
+        if(init){
+            map.removeLayer(communeLayer);
+        }else{
+          init = true;
+        }
+        communeLayer = L.geoJson(data.geojson, {
           style: myStyle,
           onEachFeature: onEachFeatureCommunes
-        }).addTo(map);
+        });
+        communeLayer.addTo(map);
       });
 
       console.log(newName);
-    /*  if (e.target.feature.properties.nom == "Var") {
-        L.geoJson(Vard, {
-          style: myStyle,
-          onEachFeature: onEachFeatureCommunes
-        }).addTo(map);
-      } else if (e.target.feature.properties.nom == "Territoire de Belfort") {
-        L.geoJson(territoiredebelfort, {
-          style: myStyle,
-          onEachFeature: onEachFeatureCommunes
-        }).addTo(map);
-      } else {
-        L.geoJson(eval(newName), {
-          style: myStyle,
-          onEachFeature: onEachFeatureCommunes
-        }).addTo(map);
-      }*/
     }
 
     function whenClickedCommunes(e) {
@@ -120,9 +113,11 @@
         displayWeather(data.jsonWeather, data.jsonForecast, lat, lon);
       });
     }
-
+var i = 0;
+var myLayer = [];
     function displayWeather(weather, forecast, lat, lon) {
       console.log(weather.weather[0]);
+
       //document.getElementById('icon-weather').innerHTML = "<i class=\"wi wi-owm-" + weather.weather[0].id + "\"></i>";
       var liste = forecast.list;
       //console.log(liste[0]);
@@ -141,7 +136,7 @@
       }
       ligneJours += "</tr>"
       content += "</tr>" + ligneJours + "</table>"
-      var myLayer = L.mapbox.featureLayer().addTo(map);
+       myLayer[i] = L.mapbox.featureLayer().addTo(map);
       var geojson = [{
         type: 'Feature',
         geometry: {
@@ -161,13 +156,14 @@
         autoPan: true,
         autoPanPadding: [5, 5],
       }
-      myLayer.on('layeradd', function(e) {
+      myLayer[i].on('layeradd', function(e) {
         var marker = e.layer,
           feature = marker.feature;
         marker.setIcon(L.divIcon(feature.properties.icon));
         marker.bindPopup(content, customOptions);
       });
-      myLayer.setGeoJSON(geojson);
+      myLayer[i].setGeoJSON(geojson);
+      i++;
     }
   </script>
   <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
