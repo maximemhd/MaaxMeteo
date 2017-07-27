@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset=utf-8 />
+  <title>A simple map</title>
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+
+  <script src='geojson/departements.geojson'></script>
+  <!--<script src='geojson/regions.geojson'></script>
+  <script src='geojson/normandie/communes-normandie.geojson'></script>
+  -->
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+
+  <script src='https://api.mapbox.com/mapbox.js/v3.1.1/mapbox.js'></script>
+  <link href='https://api.mapbox.com/mapbox.js/v3.1.1/mapbox.css' rel='stylesheet' />
+  <link href='style.css' rel='stylesheet' />
+  <link href='css/weather-icons.css' rel='stylesheet' />
+
+</head>
+
+<body>
+
+  <div id="container-map">
+    <div class='custom-popup' id='map'></div>
+  </div>
+  <div id='icon-weather'>Meteo:</div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
+  <script>
+  var socket = io.connect('http://localhost');
+
+    L.mapbox.accessToken = 'pk.eyJ1IjoibWF4aW1lbWhkIiwiYSI6ImNpengxNml1ejAwMTMyd2x1bG44MGZlcjAifQ.-iUdgy0tRNYpd5q1fGqVtQ';
+    var map = L.mapbox.map('map', 'mapbox.light')
+      .setView([47, 2.33333], 6.3);
+    var myStyle = {
+      "color": "#00abff",
+      "fillOpacity": 0,
+      "weight": 1,
+      "opacity": 0.7
+    };
+    L.geoJson(departements, {
+      style: myStyle,
+      onEachFeature: onEachFeatureDepartements
+    }).addTo(map);
+
+    function onEachFeatureDepartements(feature, layer) {
+      //console.log(feature);
+      layer.on({
+        click: whenClickedDepartements
+      });
+    }
+
+    function onEachFeatureCommunes(feature, layer) {
+      //console.log(feature);
+      layer.on({
+        click: whenClickedCommunes
+      });
+    }
+
+    function whenClickedDepartements(e) {
+      console.log(e.target.feature.properties.nom); // nom du département
+      map.fitBounds(e.target._bounds);
+      var newName = e.target.feature.properties.nom.replace(/-/g, '');
+      newName = newName.toLowerCase();
+      newName = newName.replace(/é|è|ê/g,"e");
+      newName = newName.replace(/ô|ö/g,"o");
+
+      socket.emit('askJSON', {
+        name: newName
+      });
+
+      socket.on('repJSON', function(data) {
+        //socket receive
+        console.log(data);
+        L.geoJson(data.geojson, {
+          style: myStyle,
+          onEachFeature: onEachFeatureCommunes
+        }).addTo(map);
+      });
+
+      console.log(newName);
+    /*  if (e.target.feature.properties.nom == "Var") {
+        L.geoJson(Vard, {
+          style: myStyle,
+          onEachFeature: onEachFeatureCommunes
+        }).addTo(map);
+      } else if (e.target.feature.properties.nom == "Territoire de Belfort") {
+        L.geoJson(territoiredebelfort, {
+          style: myStyle,
+          onEachFeature: onEachFeatureCommunes
+        }).addTo(map);
+      } else {
+        L.geoJson(eval(newName), {
+          style: myStyle,
+          onEachFeature: onEachFeatureCommunes
+        }).addTo(map);
+      }*/
+    }
+
+    function whenClickedCommunes(e) {
+      //console.log(e);
+      var bounds = e.target.getBounds();
+      var center = bounds.getCenter();
+      //var ne = e.target._bounds._northEast;
+      //var so = e.target._bounds._southWest;
+      gettingJSON(e.target.feature.properties.nom, center.lat, center.lng);
+      map.fitBounds(e.target._bounds);
+    }
+
+
+    function gettingJSON(city, lat, lon) {
+      socket.emit('askWeather', {
+        lat: lat,
+        lon: lon,
+      });
+
+      socket.on('repWeather', function(data) {
+        //socket receive
+        displayWeather(data.jsonWeather, data.jsonForecast, lat, lon);
+      });
+    }
+
+    function displayWeather(weather, forecast, lat, lon) {
+      console.log(weather.weather[0]);
+      //document.getElementById('icon-weather').innerHTML = "<i class=\"wi wi-owm-" + weather.weather[0].id + "\"></i>";
+      var liste = forecast.list;
+      //console.log(liste[0]);
+      var days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      var content = "<table><tr>";
+      var ligneJours = "<tr>";
+      var date_jour;
+      for (var i = 0; i < liste.length; i++) {
+        if (new Date(liste[i].dt_txt).getDay() != date_jour) {
+          content += "<td><i class=\"wi wi-owm-" + liste[i].weather[0].id + "\"></i></td>";
+          date_jour = new Date(liste[i].dt_txt).getDay();
+          var month = new Date(liste[i].dt_txt).getMonth() + 1;
+          var dateString = days[new Date(liste[i].dt_txt).getDay()] + " " + new Date(liste[i].dt_txt).getDate() + "/" + month + "/" + new Date(liste[i].dt_txt).getFullYear();
+          ligneJours += "<td>" + dateString + "</td>"
+        }
+      }
+      ligneJours += "</tr>"
+      content += "</tr>" + ligneJours + "</table>"
+      var myLayer = L.mapbox.featureLayer().addTo(map);
+      var geojson = [{
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [lon, lat]
+        },
+        properties: {
+          title: weather.weather[0].description,
+          icon: {
+            className: 'wi wi-owm-' + weather.weather[0].id, // class name to style
+            iconSize: null // size of icon, use null to set the size in CSS
+          }
+        }
+      }];
+      var customOptions = {
+        maxWidth: 500,
+        autoPan: true,
+        autoPanPadding: [5, 5],
+      }
+      myLayer.on('layeradd', function(e) {
+        var marker = e.layer,
+          feature = marker.feature;
+        marker.setIcon(L.divIcon(feature.properties.icon));
+        marker.bindPopup(content, customOptions);
+      });
+      myLayer.setGeoJSON(geojson);
+    }
+  </script>
+  <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+</body>
+
+</html>

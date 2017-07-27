@@ -1,0 +1,30 @@
+{
+  "name": "maaxmeteo",
+  "version": "1.0.0",
+  "description": "Meteo en deux clics",
+  "main": "server.js",
+  "dependencies": {
+    "express": "^4.15.3",
+    "get-json": "^0.0.3",
+    "socket.io": "^2.0.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maximemhd/MaaxMeteo.git"
+  },
+  "keywords": [
+    "meteo",
+    "mapbox"
+  ],
+  "author": "maximemhd",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/maximemhd/MaaxMeteo/issues"
+  },
+  "homepage": "https://github.com/maximemhd/MaaxMeteo#readme"
+}
